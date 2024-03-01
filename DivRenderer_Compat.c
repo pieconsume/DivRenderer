@@ -20,6 +20,7 @@
   extern int    glfwGetCursorPos(void* window, double* xpos, double* ypos);
   extern void*  glfwSetMouseButtonCallback(void* window, void* callback);
   extern void*  glfwSetKeyCallback(void* window, void* callback);
+  extern void*  glfwSetCharCallback(void* window, void* callback);
   extern void   glfwTerminate(void);
  #ifndef windows
   //Todo - add new prototypes for linux
@@ -100,16 +101,18 @@
  void updatecolors();
  void drawtext(uint, uint, char*);
  void onmousedown(void*, int, int, int);
+ void ontextinput(void*, uint);
  void onkeydown(void*, int, int, int, int);
  void render();
  void done();
  void* window;
- int rendertype; int textbase; int textcolor;
+ int rendertype, textbase, textcolor;
  int objs[3];
  int divcount;
  uint divs[4096];
  uint colors[256];
  char  buffer[0x1000];
+ int textlen = 0;
  int oldwidth = 0, oldheight = 0, width, height;
 int main(){
  #ifdef windows
@@ -157,6 +160,7 @@ int main(){
   window = glfwCreateWindow(1600, 900, "Div renderer", 0, 0);
   glfwMakeContextCurrent(window);
   glfwSetMouseButtonCallback(window, onmousedown);
+  glfwSetCharCallback(window, ontextinput);
   glfwSetKeyCallback(window, onkeydown);
  //Shaders
   char* vertshaderstr =
@@ -338,17 +342,22 @@ void onmousedown(void* window, int button, int action, int mods){
   if ((flags & 0x20u) == 0) { if ((flags & 0x08u) != 0) { oy = by-oy; } else { oy = by+oy; } } else { if ((flags & 0x80u) != 0) { oy = height - oy; } }
   if (bx < ox) { basex = bx; offsetx = ox; } else { basex = ox; offsetx = bx; }
   if (by < oy) { basey = by; offsety = oy; } else { basey = oy; offsety = by; }
-  if (mousex > basex && mousex < offsetx && mousey > basey && mousey < offsety && button == 0 && action == 1) { printf("%i\n", i); }
-  }
+  if (mousex > basex && mousex < offsetx && mousey > basey && mousey < offsety && button == 0 && action == 1){
+   } } }
+void ontextinput(void* window, uint codepoint){
+ if (codepoint > 256) { return; }
+ buffer[textlen] = (char)codepoint;
+ textlen++;
+ render();
  }
-void onkeydown(void* window, int key, int scancode, int action, int mods){
+void onkeydown(void* window, int key, int scancode, int action, int mods) {
+ if (key == 259 && textlen > 0 && (action == 1 || action == 2)) { textlen--; buffer[textlen] = 0; render(); }
  }
 void render(){
  glClear(0x4000); //0x4000 is GL_COLOR_BUFFER_BIT
  glUniform1ui(rendertype, 0);
  glDrawArrays(0x0000, 0, divcount);
- drawtext((80<<16)+20,  2, "test1");
- drawtext((160<<16)+20, 2, "test2");
+ drawtext((80<<16)+20,  2, buffer);
  glfwSwapBuffers(window);}
 void setdiv(int index, uint flags, uint colors, uint base, uint offset){
   divs[index*4+0] = flags;
