@@ -17,6 +17,9 @@
   extern int    glfwWindowShouldClose(void* window);
   extern void   glfwGetFramebufferSize(void* window,  int* width, int* height);
   extern int    glfwGetKey(void* window, uint key);
+  extern int    glfwGetCursorPos(void* window, double* xpos, double* ypos);
+  extern void*  glfwSetMouseButtonCallback(void* window, void* callback);
+  extern void*  glfwSetKeyCallback(void* window, void* callback);
   extern void   glfwTerminate(void);
  #ifndef windows
   //Todo - add new prototypes for linux
@@ -96,17 +99,18 @@
  void updatedivs();
  void updatecolors();
  void drawtext(uint, uint, char*);
+ void onmousedown(void*, int, int, int);
+ void onkeydown(void*, int, int, int, int);
  void render();
  void done();
  void* window;
- int rendertype;
- int textbase;
- int textcolor;
+ int rendertype; int textbase; int textcolor;
  int objs[3];
  int divcount;
  uint divs[4096];
  uint colors[256];
  char  buffer[0x1000];
+ int oldwidth = 0, oldheight = 0, width, height;
 int main(){
  #ifdef windows
   //Todo - fix types. Shouldn't normally effect functionality, but should be done anyway
@@ -150,8 +154,10 @@ int main(){
   #endif
  //Window init
   glfwInit();                 //Required before anything else
-  window = glfwCreateWindow(1600, 900, "IRC", 0, 0);
+  window = glfwCreateWindow(1600, 900, "Div renderer", 0, 0);
   glfwMakeContextCurrent(window);
+  glfwSetMouseButtonCallback(window, onmousedown);
+  glfwSetKeyCallback(window, onkeydown);
  //Shaders
   char* vertshaderstr =
    "#version 400\n"
@@ -304,7 +310,6 @@ int main(){
    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,1,0,1,0, 0,1,1,1,0, 0,1,0,1,1, 1,0,0,1,0, 0,0,0,0,0, 1,0,0,0,0, 0,1,0,0,0, 0,0,0,0,0, 0,0,1,0,0, 1,0,0,0,0, 0,0,0,0,0, 1,1,0,0,0, 0,1,0,0,0, 1,1,0,0,1, 0,0,1,0,0, 0,1,0,0,0, 0,0,0,0,1, 0,0,0,1,1, 0,0,0,0,1, 1,0,0,0,1, 0,1,0,0,0, 1,0,0,0,1, 0,0,0,0,1, 1,0,0,0,0, 1,0,0,0,0, 0,0,0,1,0, 0,0,0,0,0, 0,1,0,0,0, 0,0,0,0,0, 1,0,0,0,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,0, 1,0,0,0,1, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,1, 1,0,0,0,1, 0,0,1,0,0, 1,0,0,0,1, 1,0,0,1,0, 1,0,0,0,0, 1,0,0,0,1, 1,0,0,1,1, 1,0,0,0,1, 1,0,0,0,0, 1,0,0,1,0, 1,0,0,1,0, 0,0,0,0,1, 0,0,1,0,0, 1,0,0,0,1, 0,0,1,0,0, 1,1,0,1,1, 0,1,0,1,0, 0,0,1,0,0, 1,0,0,0,0, 1,0,0,0,0, 0,0,0,1,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,0, 1,0,0,0,1, 1,0,0,0,0, 0,0,1,0,0, 1,0,0,0,1, 1,0,0,0,1, 0,0,1,0,0, 0,0,0,1,0, 0,1,0,1,0, 0,0,1,0,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,0, 0,0,0,0,1, 0,1,0,0,0, 0,0,0,0,1, 0,0,1,0,0, 1,0,0,0,1, 0,1,0,1,0, 1,1,0,1,1, 0,1,0,1,0, 0,1,0,0,0, 0,1,0,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0,
    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 0,1,0,1,0, 0,0,1,0,0, 1,0,0,1,1, 0,1,1,1,1, 0,0,0,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 1,1,0,0,0, 1,0,0,0,0, 0,1,1,1,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,0, 0,0,0,1,1, 1,1,1,1,0, 1,1,1,1,0, 1,0,0,0,0, 0,1,1,1,0, 1,1,1,1,0, 0,0,0,0,0, 1,0,0,0,0, 0,0,0,0,1, 0,0,0,0,0, 1,0,0,0,0, 0,0,1,0,0, 1,1,1,1,1, 1,0,0,0,1, 1,1,1,1,1, 0,1,1,1,1, 1,1,1,1,0, 1,1,1,1,1, 1,0,0,0,0, 1,1,1,1,1, 1,0,0,0,1, 1,1,1,1,1, 1,1,1,1,1, 1,0,0,0,1, 1,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,1, 1,0,0,0,0, 1,1,1,0,1, 1,0,0,0,1, 1,1,1,1,1, 0,0,1,0,0, 1,1,1,1,1, 0,0,1,0,0, 1,0,0,0,1, 1,0,0,0,1, 0,0,1,0,0, 1,1,1,1,1, 1,1,1,0,0, 0,0,0,0,1, 1,1,1,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,1,1,1,1, 1,1,1,1,0, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,1, 0,0,1,0,0, 1,1,1,1,1, 1,0,0,0,1, 0,1,1,1,0, 0,1,1,0,0, 0,1,0,0,1, 0,1,1,0,0, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0, 1,0,0,0,0, 0,0,0,0,1, 0,1,0,0,0, 1,1,1,1,1, 0,0,1,1,0, 1,1,1,1,1, 0,0,1,0,0, 1,0,0,0,1, 1,0,0,0,1, 1,1,0,0,0, 1,1,1,1,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 0,0,0,0,0, 0,0,0,0,0,};
   glTexImage2D(0x0DE1, 0, 0x8232, 128*5, 7, 0, 0x8D94, 0x1401, font); //0x8232 GL_R8UI, 0x8D94 GL_RED_INTEGER, 0x1401 GL_UNSIGNED_BYTE
-  int oldwidth = 0, oldheight = 0, width, height;
  setdiv(0, 0x02000000, (0<<16)+2, (20<<16)+20, (20<<16)+20);
  setdiv(1, 0x02000000, (1<<16)+0, (60<<16)+60, (20<<16)+20);
  divcount = 2;
@@ -318,6 +323,26 @@ int main(){
   if (oldwidth != width || oldheight != height) { oldwidth = width; oldheight = height;  glViewport(0, 0, width, height); glUniform2ui(unires, width, height); render(); }
   glfwPollEvents();}
   done();}
+void onmousedown(void* window, int button, int action, int mods){
+ double mousexd, mouseyd;
+ glfwGetCursorPos(window, &mousexd, &mouseyd);
+ int mousex = (int)mousexd, mousey = (int)mouseyd;
+ for (int i = 0; i < divcount; i++){
+  int basex, basey, offsetx, offsety;
+  int flags = divs[i*4+0], base = divs[i*4+2], offs = divs[i*4+3];
+  int bx = base >> 16, by = base &  0xFFFFu;
+  int ox = offs >> 16, oy = offs &  0xFFFFu;
+  if ((flags & 0x01u) != 0) { bx = width  - bx; }
+  if ((flags & 0x02u) != 0) { by = height - by; }
+  if ((flags & 0x10u) == 0) { if ((flags & 0x04u) != 0) { ox = bx-ox; } else { ox = bx+ox; } } else { if ((flags & 0x40u) != 0) { ox = width  - ox; } }
+  if ((flags & 0x20u) == 0) { if ((flags & 0x08u) != 0) { oy = by-oy; } else { oy = by+oy; } } else { if ((flags & 0x80u) != 0) { oy = height - oy; } }
+  if (bx < ox) { basex = bx; offsetx = ox; } else { basex = ox; offsetx = bx; }
+  if (by < oy) { basey = by; offsety = oy; } else { basey = oy; offsety = by; }
+  if (mousex > basex && mousex < offsetx && mousey > basey && mousey < offsety && button == 0 && action == 1) { printf("%i\n", i); }
+  }
+ }
+void onkeydown(void* window, int key, int scancode, int action, int mods){
+ }
 void render(){
  glClear(0x4000); //0x4000 is GL_COLOR_BUFFER_BIT
  glUniform1ui(rendertype, 0);
